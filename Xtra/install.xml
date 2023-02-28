@@ -1,0 +1,15 @@
+<?xml version='1.0' standalone='yes'?>
+<extension>
+  <name>PLUGIN_XTRA</name>
+  <creator>Craig Drummond</creator>
+  <defaultState>enabled</defaultState>
+  <description>PLUGIN_XTRA_DESC</description>
+  <id>d524749a-1701-4839-a5b8-3c5a9eeda57d</id>
+  <module>Plugins::Xtra::Plugin</module>
+  <targetApplication>
+    <minVersion>7.9.0</minVersion>
+    <maxVersion>*</maxVersion>
+    <id>SlimServer</id>
+  </targetApplication>
+  <version>0.0.1</version>
+</extension>

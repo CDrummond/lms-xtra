@@ -1,0 +1,5 @@
+PLUGIN_XTRA
+	EN	Xtra
+
+PLUGIN_XTRA_DESC
+	EN	eXtra functionality.
