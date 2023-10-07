@@ -16,6 +16,7 @@ use Slim::Utils::Log;
 use Slim::Utils::Misc;
 use Slim::Utils::Prefs;
 use Slim::Utils::Strings qw(string);
+use Time::HiRes qw/gettimeofday/;
 
 my $log = Slim::Utils::Log->addLogCategory({
     'category' => 'plugin.xtra',
@@ -27,6 +28,7 @@ my $prefs = preferences('plugin.xtra');
 my $serverPrefs = preferences('server');
 my %lastPresetIdxs = ();
 my %lastPresetTimes = ();
+my %lastCommandTimes = ();
 
 sub getDisplayName {
     return 'PLUGIN_XTRA';
@@ -130,6 +132,14 @@ sub _cliCommand {
         return;
     }
 
+    my $cid = $request->client()->id();
+    my $lastCommandTime = exists $lastCommandTimes{$cid} ? $lastCommandTimes{$cid} : 0.0;
+    my $now = gettimeofday;
+    $lastCommandTimes{$cid} = $now;
+    if (($now - $lastCommandTime)<0.250) {
+        $request->setStatusBadParams();
+        return;
+    }
     if ($cmd eq 'cycle-presets') {
         _cyclePresets($request);
         return;
