@@ -25,6 +25,7 @@ my $log = Slim::Utils::Log->addLogCategory({
 
 my $prefs = preferences('plugin.xtra');
 my $serverPrefs = preferences('server');
+my %lastPresetIdxs = ();
 
 sub getDisplayName {
     return 'PLUGIN_XTRA';
@@ -65,6 +66,49 @@ sub _playPreset {
     $request->setStatusDone();
 }
 
+sub _cyclePresets {
+    my $request = shift;
+    my $client = $request->client();
+    my $cid = $client->id();
+    my $lastPresetIdx = exists $lastPresetIdxs{$cid} ? $lastPresetIdxs{$cid} : -1;
+    my $presets = $serverPrefs->client($client)->get('presets');
+    my $idx = $lastPresetIdx==-1 || Slim::Player::Playlist::count($client)==0 ? 0 : ($lastPresetIdx+1);
+    main::INFOLOG && $log->is_info && $log->info('IDX: ' . $idx . ', LIDX: ' . $lastPresetIdx . ', HAD: ' . $lastPresetIdxs{$cid});
+    my $url = undef;
+    # Find URL after current
+    for (; $idx < 10; $idx++) {
+        $url = $presets->[$idx]->{URL};
+        if ($url) {
+            main::INFOLOG && $log->is_info && $log->info('Found[1] @' . $idx);
+            last;
+        }
+    }
+    if (!$url) {
+        # Just find first URL
+        for ($idx = 0; $idx < 10; $idx++) {
+            $url = $presets->[$idx]->{URL};
+            if ($url) {
+                main::INFOLOG && $log->is_info && $log->info('Found[2] @' . $idx);
+                last;
+            }
+        }
+    }
+    if (!$url) {
+        $request->setStatusBadParams();
+        return;
+    }
+    main::INFOLOG && $log->is_info && $log->info('IDX: ' . $idx . ', URL: ' . $url);
+    if (!$url) {
+        $request->setStatusBadParams();
+        return;
+    }
+    $client->execute(['playlist', 'clear']);
+    $client->execute(['playlist', 'play', $url]);
+    $request->setStatusDone();
+    $lastPresetIdxs{$cid} = $idx;
+    main::INFOLOG && $log->is_info && $log->info('STORE IDX: ' . $idx . ', URL: ' . $url . ', MAP: ' . $lastPresetIdxs{$cid});
+}
+
 sub _cliCommand {
     my $request = shift;
 
@@ -77,8 +121,13 @@ sub _cliCommand {
     my $cmd = $request->getParam('_cmd');
     main::INFOLOG && $log->is_info && $log->info('Xtra cmd: ' . $cmd);
     my $client = $request->client();
-    if ($request->paramUndefinedOrNotOneOf($cmd, ['preset', 'btn']) ) {
+    if ($request->paramUndefinedOrNotOneOf($cmd, ['preset', 'btn', 'cycle-presets']) ) {
         $request->setStatusBadParams();
+        return;
+    }
+
+    if ($cmd eq 'cycle-presets') {
+        _cyclePresets($request);
         return;
     }
 
