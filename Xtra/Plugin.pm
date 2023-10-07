@@ -26,6 +26,7 @@ my $log = Slim::Utils::Log->addLogCategory({
 my $prefs = preferences('plugin.xtra');
 my $serverPrefs = preferences('server');
 my %lastPresetIdxs = ();
+my %lastPresetTimes = ();
 
 sub getDisplayName {
     return 'PLUGIN_XTRA';
@@ -71,8 +72,10 @@ sub _cyclePresets {
     my $client = $request->client();
     my $cid = $client->id();
     my $lastPresetIdx = exists $lastPresetIdxs{$cid} ? $lastPresetIdxs{$cid} : -1;
+    my $lastPresetTime = exists $lastPresetTimes{$cid} ? $lastPresetTimes{$cid} : 0;
     my $presets = $serverPrefs->client($client)->get('presets');
-    my $idx = $lastPresetIdx==-1 || Slim::Player::Playlist::count($client)==0 ? 0 : ($lastPresetIdx+1);
+    my $now = time();
+    my $idx = $lastPresetTime==0 || ($now - $lastPresetTime)>600 || $lastPresetIdx==-1 || Slim::Player::Playlist::count($client)==0 ? 0 : ($lastPresetIdx+1);
     main::INFOLOG && $log->is_info && $log->info('IDX: ' . $idx . ', LIDX: ' . $lastPresetIdx . ', HAD: ' . $lastPresetIdxs{$cid});
     my $url = undef;
     # Find URL after current
@@ -106,6 +109,7 @@ sub _cyclePresets {
     $client->execute(['playlist', 'play', $url]);
     $request->setStatusDone();
     $lastPresetIdxs{$cid} = $idx;
+    $lastPresetTimes{$cid} = $now;
     main::INFOLOG && $log->is_info && $log->info('STORE IDX: ' . $idx . ', URL: ' . $url . ', MAP: ' . $lastPresetIdxs{$cid});
 }
 
