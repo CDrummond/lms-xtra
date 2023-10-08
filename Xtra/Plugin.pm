@@ -115,6 +115,28 @@ sub _cyclePresets {
     main::INFOLOG && $log->is_info && $log->info('STORE IDX: ' . $idx . ', URL: ' . $url . ', MAP: ' . $lastPresetIdxs{$cid});
 }
 
+sub _stopPlayOrPause {
+    my $request = shift;
+    my $client = $request->client();
+    my $song = Slim::Player::Source::playingSong($client);
+    my $command = 'play';
+    if ($client->isPlaying()) {
+         $command = 'pause';
+        if (defined $song) {
+            my $url = $song->currentTrack()->url;
+            if ($url) {
+                my $idx = rindex($url, "http", 0);
+                if (0==$idx) {
+                    $command = 'stop';
+                }
+            }
+        }
+    }
+    main::INFOLOG && $log->is_info && $log->info('Send command ' . $command);
+    $client->execute([$command]);
+    $request->setStatusDone();
+}
+
 sub _cliCommand {
     my $request = shift;
 
@@ -127,7 +149,7 @@ sub _cliCommand {
     my $cmd = $request->getParam('_cmd');
     main::INFOLOG && $log->is_info && $log->info('Xtra cmd: ' . $cmd);
     my $client = $request->client();
-    if ($request->paramUndefinedOrNotOneOf($cmd, ['preset', 'btn', 'cycle-presets']) ) {
+    if ($request->paramUndefinedOrNotOneOf($cmd, ['preset', 'btn', 'cycle-presets', 'stop-pause']) ) {
         $request->setStatusBadParams();
         return;
     }
@@ -140,8 +162,14 @@ sub _cliCommand {
         $request->setStatusBadParams();
         return;
     }
+
     if ($cmd eq 'cycle-presets') {
         _cyclePresets($request);
+        return;
+    }
+
+    if ($cmd eq 'stop-pause') {
+        _stopPlayOrPause($request);
         return;
     }
 
